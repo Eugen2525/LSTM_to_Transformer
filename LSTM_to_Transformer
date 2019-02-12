@@ -1,0 +1,30 @@
+# Change LSTM to Tranformer in Keras
+def transformer_code(inputLayer):
+	hparams = transformer.transformer_base()
+	encoder = transformer.TransformerEncoder(hparams, mode=tf.estimator.ModeKeys.TRAIN)
+	x = keras.backend.expand_dims(inputLayer, axis=2)
+	y = encoder({"inputs": x, "targets": 0, "target_space_id": 0})
+	y = keras.backend.squeeze(y[0], 2)
+	return y
+
+
+def trainModel(args, trainInput, trianOutput, testInput, testOutput, taskName, tags):
+	
+	inputLayer = keras.layers.Input(shape=(len(trainInput[0]),
+				len(trainInput[0][0])), dtype='float32')
+	
+	inputAfterDense = keras.layers.Dense(512, activation='relu')(inputLayer)
+
+	crfLayer = CRF(len(tags), sparse_target=True, name='result')
+
+	y = keras.layers.Lambda(transformer_code)(inputAfterDense )
+	modelPred = crfLayer(y)
+
+	model = keras.Model(inputs=inputLayer, outputs=modelPred)
+	model.compile(
+		optimizer='adam',
+		loss = {'result': crfLayer.loss_function},
+		metrics={'result': crfLayer.accuracy}
+		)
+	print 'finish model setting'
+	print model.summary()
